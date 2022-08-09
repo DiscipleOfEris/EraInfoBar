@@ -5,6 +5,10 @@ import sqlite3
 con = sqlite3.connect('mob_info.db')
 cur = con.cursor()
 
+conTemp = sqlite3.connect(':memory:')
+conTemp.row_factory = sqlite3.Row
+curTemp = conTemp.cursor()
+
 cur.executescript('''
 DROP TABLE IF EXISTS mobs;
 DROP INDEX IF EXISTS idx_mobs_groupid;
@@ -916,6 +920,65 @@ enum class Mod
 
 DynamisZones = [39,40,41,42,134,135,185,186,187,188,294,295,296,297]
 
+with open('sql/mob_family_system.sql') as file:
+    fileContents = file.read()
+    fileContents = re.sub(r"^CREATE DATABASE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"^USE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"(`\w+`[^,]*)unsigned([^,]*,)", r"\1\2", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"ENGINE\s?=[^;]*;", ";", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"\\'", "''", fileContents)
+    #print(fileContents)
+    curTemp.executescript(fileContents)
+
+with open('sql/mob_pools.sql') as file:
+    fileContents = file.read()
+    fileContents = re.sub(r"^CREATE DATABASE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"^USE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"(`\w+`[^,]*)unsigned([^,]*,)", r"\1\2", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"ENGINE\s?=[^;]*;", ";", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"\\'", "''", fileContents)
+    fileContents = re.sub(r"`modelid`\s*binary", "`modelid` VARCHAR", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"_binary ([^,]+),", r"'\1',", fileContents, flags=re.IGNORECASE)
+    curTemp.executescript(fileContents)
+
+with open('sql/mob_groups.sql') as file:
+    fileContents = file.read()
+    fileContents = re.sub(r"^CREATE DATABASE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"^USE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"(`\w+`[^,]*)unsigned([^,]*,)", r"\1\2", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"ENGINE\s?=[^;]*;", ";", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"\\'", "''", fileContents)
+    curTemp.executescript(fileContents)
+
+with open('sql/mob_pets.sql') as file:
+    fileContents = file.read()
+    fileContents = re.sub(r"^CREATE DATABASE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"^USE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"(`\w+`[^,]*)unsigned([^,]*,)", r"\1\2", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"ENGINE\s?=[^;]*;", ";", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"\\'", "''", fileContents)
+    curTemp.executescript(fileContents)
+
+with open('sql/mob_spawn_points.sql') as file:
+    fileContents = file.read()
+    fileContents = re.sub(r"^CREATE DATABASE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"^USE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"(`\w+`[^,]*)unsigned([^,]*,)", r"\1\2", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"ENGINE\s?=[^;]*;", ";", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"\\'", "''", fileContents)
+    curTemp.executescript(fileContents)
+
+with open('sql/mob_pets.sql') as file:
+    fileContents = file.read()
+    fileContents = re.sub(r"^CREATE DATABASE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"^USE[^;]*;", "", fileContents, flags=re.IGNORECASE | re.MULTILINE)
+    fileContents = re.sub(r"(`\w+`[^,]*)unsigned([^,]*,)", r"\1\2", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"ENGINE\s?=[^;]*;", ";", fileContents, flags=re.IGNORECASE)
+    fileContents = re.sub(r"\\'", "''", fileContents)
+    curTemp.executescript(fileContents)
+
+conTemp.commit()
+
 con.commit()
 families = dict()
 pools = dict()
@@ -928,193 +991,105 @@ errorCount = 0
 def family_generator():
   global count, errorCount
   count = errorCount = 0
-  with open('sql/mob_family_system.sql') as file:
-    familyPattern = re.compile('VALUES \((\d+),[^,]+,(\d+),[^,]+,\d+,\d+,(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),([\d\.]+),\d+,(\d+),(\d+)\)')
-    for line in file.readlines():
-      familyMatch = familyPattern.search(line)
-      if not familyMatch:
-        continue
-      
-      family_id = int(familyMatch.group(1))
-      ecosystem = int(familyMatch.group(2))
-      hp = int(familyMatch.group(3))
-      mp = int(familyMatch.group(4))
-      str = int(familyMatch.group(5))
-      dex = int(familyMatch.group(6))
-      vit = int(familyMatch.group(7))
-      agi = int(familyMatch.group(8))
-      intelligence = int(familyMatch.group(9))
-      mnd = int(familyMatch.group(10))
-      chr = int(familyMatch.group(11))
-      att = int(familyMatch.group(12))
-      defense = int(familyMatch.group(13))
-      acc = int(familyMatch.group(14))
-      eva = int(familyMatch.group(15))
-      slash = int(float(familyMatch.group(16))*1000)
-      pierce = int(float(familyMatch.group(17))*1000)
-      h2h = int(float(familyMatch.group(18))*1000)
-      impact = int(float(familyMatch.group(19))*1000)
-      fire = int(float(familyMatch.group(20))*1000)
-      ice = int(float(familyMatch.group(21))*1000)
-      wind = int(float(familyMatch.group(22))*1000)
-      earth = int(float(familyMatch.group(23))*1000)
-      lightning = int(float(familyMatch.group(24))*1000)
-      water = int(float(familyMatch.group(25))*1000)
-      light = int(float(familyMatch.group(26))*1000)
-      dark = int(float(familyMatch.group(27))*1000)
-      detects = int(familyMatch.group(28))
-      charmable = int(familyMatch.group(29))
-      
-      count += 1
-      
-      families[family_id] = True
-      
-      yield (family_id, ecosystem, hp, mp, str, dex, vit, agi, intelligence, mnd, chr, att, defense, acc, eva, slash, pierce, h2h, impact, fire, ice, wind, earth, lightning, water, light, dark, detects, charmable)
+  for row in curTemp.execute('SELECT * FROM mob_family_system'):
+    count += 1
+
+    families[row['familyid']] = True
+    
+    yield (row['familyid'], row['systemid'], row['HP'], row['MP'], row['STR'], row['DEX'], row['VIT'], row['AGI'], row['INT'], row['MND'], row['CHR'], row['ATT'], row['DEF'], row['ACC'], row['EVA'], row['Slash']*1000, row['Pierce']*1000, row['H2H']*1000, row['Impact']*1000, row['Fire']*1000, row['Ice']*1000, row['Wind']*1000, row['Earth']*1000, row['Lightning']*1000, row['Water']*1000, row['Light']*1000, row['Dark']*1000, row['detects'], row['charmable'])
 
 cur.executemany('INSERT INTO families (family_id, ecosystem, hp, mp, str, dex, vit, agi, int, mnd, chr, att, def, acc, eva, slash, pierce, h2h, impact, fire, ice, wind, earth, lightning, water, light, dark, detects, charmable) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', family_generator())
 con.commit()
 
-print('success', (count-errorCount), count)
-  
+print('families success', (count-errorCount), 'fail', errorCount)
+
 def pool_generator():
   global count, errorCount
   count = errorCount = 0
-  with open('sql/mob_pools.sql') as file:
-    poolPattern = re.compile('VALUES \((\d+),([^,]+),[^,]+,(\d+),[^,]+,(\d+),(\d+),\d+,\d+,\d+,\d+,(\d+),(\d+),(\d+),(\d+),(\d+),')
-    for line in file.readlines():
-      poolMatch = poolPattern.search(line)
-      if not poolMatch:
-        continue
-      
-      pool_id = int(poolMatch.group(1))
-      name = poolMatch.group(2)
-      family_id = int(poolMatch.group(3))
-      mJob = int(poolMatch.group(4))
-      sJob = int(poolMatch.group(5))
-      aggressive = int(poolMatch.group(6))
-      true_detection = int(poolMatch.group(7))
-      linking = int(poolMatch.group(8))
-      nm = int(poolMatch.group(9)) & 0x02 # NM flag for MobType field.
-      immunities = int(poolMatch.group(10))
-      
-      count += 1
-      
-      if not (family_id in families):
+  for row in curTemp.execute('SELECT * FROM mob_pools'):
+    count += 1
+
+    if not (row['familyid'] in families):
         errorCount += 1
-        print('fail', pool_id, family_id, name)
+        print('pool fail', row['poolid'], row['familyid'], row['name'])
         continue
-      
-      pools[pool_id] = true_detection
-      
-      yield (pool_id, family_id, mJob, sJob, aggressive, linking, nm, immunities)
+
+    pools[row['poolid']] = row['true_detection']
+    
+    yield (row['poolid'], row['familyid'], row['mJob'], row['sJob'], row['aggro'], row['links'], row['mobType'] & 0x02, row['immunity'])
 
 cur.executemany('INSERT INTO pools (pool_id, family_id, mJob, sJob, aggressive, linking, nm, immunities) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', pool_generator())
 con.commit()
 
-print('success', (count-errorCount), count)
+print('pools success', (count-errorCount), 'fail', errorCount)
 
 def group_generator():
   global count, errorCount
   count = errorCount = 0
-  with open('sql/mob_groups.sql') as file:
-    groupPattern = re.compile('VALUES \((\d+), (\d+), (\d+), (\d+), \d+, \d+, (\d+), (\d+), (\d+), (\d+),')
-    for line in file.readlines():
-      groupMatch = groupPattern.search(line)
-      if not groupMatch:
-        continue
-      
-      group_id = int(groupMatch.group(1))
-      pool_id = int(groupMatch.group(2))
-      zone_id = int(groupMatch.group(2))
-      respawn = int(groupMatch.group(4))
-      hp = int(groupMatch.group(5))
-      mp = int(groupMatch.group(6))
-      lvl_min = int(groupMatch.group(7))
-      lvl_max = int(groupMatch.group(8))
-      
-      count += 1
-      
-      if not (pool_id in pools):
+  for row in curTemp.execute('SELECT * FROM mob_groups'):
+    count += 1
+
+    if not (row['poolid'] in pools):
         errorCount += 1
-        print('fail', group_id, pool_id)
+        print('group fail', row['groupid'], row['poolid'])
         continue
-      
-      true_detection = pools[pool_id]
-      if zone_id in DynamisZones:
+
+    groups[row['groupid']] = True
+    
+    true_detection = pools[row['poolid']]
+    if row['zoneid'] in DynamisZones:
         true_detection = 1
-      
-      groups[group_id] = True
-      
-      yield (group_id, pool_id, respawn, hp, mp, lvl_min, lvl_max, true_detection)
+    
+    yield (row['groupid'], row['poolid'], row['respawntime'], row['HP'], row['MP'], row['minLevel'], row['maxLevel'], true_detection)
 
 cur.executemany('INSERT INTO groups (group_id, pool_id, respawn, hp, mp, lvl_min, lvl_max, true_detection) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', group_generator())
 con.commit()
 
-print('success', (count-errorCount), count)
+print('groups success', (count-errorCount), 'fail', errorCount)
 
 def mob_generator():
   global count, errorCount
   count = errorCount = 0
-  with open('sql/mob_spawn_points.sql') as file:
-    mobPattern = re.compile('VALUES \((\d+), \'([^,]+)\', \'([^,]*)\', (\d+),')
-    for line in file.readlines():
-      mobMatch = mobPattern.search(line)
-      #print(mobMatch)
-      if not mobMatch:
-        continue
-      
-      mob_id = int(mobMatch.group(1))
-      alt_name = mobMatch.group(2).replace('_', ' ')
-      mob_name = mobMatch.group(3).replace('\\', '')
-      mob_iname = re.sub('[\'\"\-\(\)\,\. ]', '', mob_name.lower())
-      group_id = int(mobMatch.group(4))
-      
-      count += 1
-      
-      if len(mob_name) == 0:
-        mob_name = alt_name
-      
-      if not (group_id in groups):
+  for row in curTemp.execute('SELECT * FROM mob_spawn_points'):
+    count += 1
+
+    if not (row['groupid'] in groups):
         errorCount += 1
-        print('fail', mob_id, group_id, mob_name)
+        print('mob fail', row['mobid'], row['groupid'], row['mobname'])
         continue
-      
-      mobs[mob_id] = True
-      
-      yield (mob_id, group_id, mob_name)
+    
+    mobs[row['mobid']] = True
+    
+    alt_name = row['mobname'].replace('_', ' ')
+    mob_name = row['polutils_name']
+    
+    if len(mob_name) == 0:
+        mob_name = alt_name
+    
+    yield (row['mobid'], row['groupid'], mob_name)
 
 cur.executemany('INSERT INTO mobs (mob_id, group_id, name) VALUES (?, ?, ?)', mob_generator())
 con.commit()
 
-print('success', (count-errorCount), count)
+print('mobs success', (count-errorCount), 'fail', errorCount)
 
 def pet_generator():
   global count, errorCount
   count = errorCount = 0
-  with open('sql/mob_pets.sql') as file:
-    petPattern = re.compile('VALUES \((\d+), (\d+),')
-    for line in file.readlines():
-      pos = line.find('--')
-      if pos > -1 and pos < 2:
-        continue
-      
-      petMatch = petPattern.search(line)
-      if not petMatch:
-        continue
-      
-      master_id = int(petMatch.group(1))
-      pet_id = int(petMatch.group(2))+master_id
-      
-      count += 1
-      
-      if master_id == pet_id or not ((master_id in mobs) or (pet_id in mobs)):
+  for row in curTemp.execute('SELECT * FROM mob_pets'):
+    count += 1
+
+    master_id = row['mob_mobid']
+    pet_id = row['pet_offset'] + master_id
+
+    if master_id == pet_id or not (master_id in mobs or pet_id in mobs):
         errorCount += 1
-        print('fail', master_id, pet_id)
+        print('pet fail', master_id, pet_id)
         continue
-      
-      yield (pet_id,)
+    
+    yield (pet_id,)
 
 cur.executemany('UPDATE mobs SET pet=1 WHERE mob_id = ?', pet_generator())
 con.commit()
 
-print('success', (count-errorCount), count)
+print('pets success', (count-errorCount), 'fail', errorCount)
