@@ -26,7 +26,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.]]
 
 _addon.name = 'EraInfoBar'
 _addon.author = 'DiscipleOfEris'
-_addon.version = '1.0.0'
+_addon.version = '1.1.0'
 _addon.commands = {'ib', 'infobar'}
 
 config = require('config')
@@ -43,6 +43,7 @@ defaults.NoTarget = "${zone_name} ${name} (${main_job}${main_job_level}/${sub_jo
 defaults.TargetPC = "${name}"
 defaults.TargetNPC = "${name}"
 defaults.TargetMOB = "${name} (Lv.${lvl} ${job}${respawn||, Respawn:%s})${aggressive|| Aggressive}${linking|| Linking}${true_detection|| True}${detects|| %s}${resistances|| %s}${immunities|| Immune: %s}"
+defaults.shouldScan = true
 defaults.display = {}
 defaults.display.pos = {}
 defaults.display.pos.x = 0
@@ -138,7 +139,33 @@ function get_target(index)
     box:text(settings.NoTarget)
     box:update(infobar)
   else
-    if target.spawn_type == 13 or target.spawn_type == 14 or target.spawn_type == 9 or target.spawn_type == 1 then
+    -- spawn_type is no longer being set the same way.
+    -- Instead, use index.
+    -- index < 1024 (0x400) means either mob, npc, or ship.
+    -- index < 1792 (0x700) means pc.
+    -- index < 2048 (0x800) means pet, trust, or fellow
+    
+    if target.index < 1024 then -- mob or NPC
+      mob = Mob:new(target.id)
+      if mob then -- is a mob
+        box:color(255,255,128)
+        
+        if target_idx_table:containskey(target.index) then
+          local t = target_idx_table[target.index]
+          if os.clock() < t.expires then Mob.setLvl(mob, t.lvl)
+          elseif settings.shouldScan and os.clock() >= t.expires then scan() end
+        elseif settings.shouldScan then scan() end
+        
+        box:bold(mob.aggressive and Mob.canAggro(mob, player.main_job_level))
+        box:text(settings.TargetMOB)
+        box:update(mob)
+      else -- is an NPC
+        box:color(128,255,128)
+        box:text(settings.TargetNPC)
+        box:bold(false)
+        box:update(infobar)
+      end
+    else --if target.index < 1792 then -- is a PC
       box:bold(false)
       if target.spawn_type == 1 then
         box:color(255,255,255)
@@ -147,24 +174,6 @@ function get_target(index)
       end
       box:text(settings.TargetPC)
       box:update(infobar)
-    elseif target.spawn_type == 2 or target.spawn_type == 34 then
-      box:color(128,255,128)
-      box:text(settings.TargetNPC)
-      box:bold(false)
-      box:update(infobar)
-    elseif target.spawn_type == 16 then
-      box:color(255,255,128)
-      mob = Mob:new(target.id)
-      
-      if target_idx_table:containskey(target.index) then
-        local t = target_idx_table[target.index]
-        if t.lvl <= 0 or os.clock() >= t.expires then scan()
-        else Mob.setLvl(mob, t.lvl) end
-      else scan() end
-      
-      box:bold(mob.aggressive and Mob.canAggro(mob, player.main_job_level))
-      box:text(settings.TargetMOB)
-      box:update(mob)
     end
   end
 end
