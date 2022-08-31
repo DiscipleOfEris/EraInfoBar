@@ -1,3 +1,5 @@
+# Development for this addon has been moved to https://github.com/DiscipleOfEris/Windower4Addons
+
 # InfoBar #
 
 Displays a configurable bar showing information on your targets.
